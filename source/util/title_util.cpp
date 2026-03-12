@@ -27,6 +27,7 @@ SOFTWARE.
 #include <switch.h>
 #include "util/error.hpp"
 #include "util/offline_title_db.hpp"
+#include "util/debug.h"
 
 namespace tin::util
 {
@@ -80,10 +81,15 @@ namespace tin::util
 
     std::string GetBaseTitleName(u64 baseTitleId)
     {
+        LOG_DEBUG("[GetBaseTitleName] titleId=0x%016lx\n", baseTitleId);
+
         auto getOfflineName = [baseTitleId]() -> std::string {
             inst::offline::TitleMetadata meta;
-            if (inst::offline::TryGetMetadata(baseTitleId, meta) && !meta.name.empty())
+            if (inst::offline::TryGetMetadata(baseTitleId, meta) && !meta.name.empty()) {
+                LOG_DEBUG("[GetBaseTitleName] 0x%016lx offline DB hit: \"%s\"\n", baseTitleId, meta.name.c_str());
                 return meta.name;
+            }
+            LOG_DEBUG("[GetBaseTitleName] 0x%016lx offline DB miss, returning Unknown\n", baseTitleId);
             return "Unknown";
         };
 
@@ -93,13 +99,13 @@ namespace tin::util
 
         if (R_FAILED(rc = nsGetApplicationControlData(NsApplicationControlSource_Storage, baseTitleId, &appControlData, sizeof(NsApplicationControlData), &sizeRead)))
         {
-            LOG_DEBUG("Failed to get application control data. Error code: 0x%08x\n", rc);
+            LOG_DEBUG("[GetBaseTitleName] 0x%016lx nsGetApplicationControlData failed: 0x%08x -> offline DB\n", baseTitleId, rc);
             return getOfflineName();
         }
 
         if (sizeRead < sizeof(appControlData.nacp))
         {
-            LOG_DEBUG("Incorrect size for nacp\n");
+            LOG_DEBUG("[GetBaseTitleName] 0x%016lx NACP size too small (%zu < %zu) -> offline DB\n", baseTitleId, sizeRead, sizeof(appControlData.nacp));
             return getOfflineName();
         }
 
@@ -107,18 +113,25 @@ namespace tin::util
 
         if (R_FAILED(rc = nacpGetLanguageEntry(&appControlData.nacp, &languageEntry)))
         {
-            LOG_DEBUG("Failed to get language entry. Error code: 0x%08x\n", rc);
+            LOG_DEBUG("[GetBaseTitleName] 0x%016lx nacpGetLanguageEntry failed: 0x%08x -> offline DB\n", baseTitleId, rc);
             return getOfflineName();
         }
 
         if (languageEntry == NULL)
         {
-            LOG_DEBUG("Language entry is null! Error code: 0x%08x\n", rc);
+            LOG_DEBUG("[GetBaseTitleName] 0x%016lx language entry is null -> offline DB\n", baseTitleId);
             return getOfflineName();
         }
 
-        if (languageEntry->name[0] != '\0')
+        if (languageEntry->name[0] != '\0') {
+            LOG_DEBUG("[GetBaseTitleName] 0x%016lx NACP name: \"%s\" (bytes: %02x %02x %02x %02x)\n",
+                baseTitleId, languageEntry->name,
+                (unsigned char)languageEntry->name[0], (unsigned char)languageEntry->name[1],
+                (unsigned char)languageEntry->name[2], (unsigned char)languageEntry->name[3]);
             return languageEntry->name;
+        }
+
+        LOG_DEBUG("[GetBaseTitleName] 0x%016lx NACP name empty -> offline DB\n", baseTitleId);
         return getOfflineName();
     }
 
