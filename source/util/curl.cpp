@@ -143,7 +143,7 @@ int progress_callback_file(void *clientp, curl_off_t dltotal, curl_off_t dlnow, 
 
 static constexpr long kDefaultConnectTimeoutMs = 15000;
 static constexpr long kLowSpeedLimitBytesPerSec = 1;
-static constexpr long kLowSpeedTimeSeconds = 45;
+static constexpr long kLowSpeedTimeSeconds = 15;
 
 static bool ensureCurlGlobalInit() {
     static std::once_flag initFlag;
