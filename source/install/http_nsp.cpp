@@ -34,6 +34,7 @@ SOFTWARE.
 #include "util/lang.hpp"
 #include "ui/instPage.hpp"
 #include "ui/MainApplication.hpp"
+#include "ui/idle_backlight.hpp"
 
 namespace inst::ui { extern MainApplication *mainApp; }
 
@@ -161,6 +162,7 @@ namespace tin::install::nsp
         {
             if (args.retryConfirm.pending.load())
             {
+                inst::ui::IdleBacklight::ResetTimer();
                 int choice = inst::ui::mainApp->CreateShowDialog(
                     "inst.net.retry.title"_lang,
                     "inst.net.retry.desc"_lang,

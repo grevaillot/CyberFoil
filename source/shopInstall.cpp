@@ -22,6 +22,7 @@
 #include "util/title_util.hpp"
 #include "ui/MainApplication.hpp"
 #include "ui/instPage.hpp"
+#include "ui/idle_backlight.hpp"
 #include "util/config.hpp"
 #include "util/curl.hpp"
 #include "util/error.hpp"
@@ -1669,6 +1670,7 @@ namespace shopInstStuff {
             std::string failedName = currentName.empty() ? names.front() : currentName;
             inst::ui::instPage::setInstInfoText("inst.info_page.failed"_lang + failedName);
             inst::ui::instPage::setInstBarPerc(0);
+            inst::ui::IdleBacklight::ResetTimer();
             std::string audioPath = "romfs:/audio/bark.wav";
             if (!inst::config::soundEnabled) audioPath = "";
             if (std::filesystem::exists(inst::config::appDir + "/bark.wav")) audioPath = inst::config::appDir + "/bark.wav";
@@ -1689,6 +1691,7 @@ namespace shopInstStuff {
         if (nspInstalled) {
             inst::ui::instPage::setInstInfoText("inst.info_page.complete"_lang);
             inst::ui::instPage::setInstBarPerc(100);
+            inst::ui::IdleBacklight::ResetTimer();
             std::string audioPath = "romfs:/audio/success.wav";
             if (!inst::config::soundEnabled) audioPath = "";
             if (std::filesystem::exists(inst::config::appDir + "/success.wav")) audioPath = inst::config::appDir + "/success.wav";

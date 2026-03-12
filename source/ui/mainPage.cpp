@@ -16,6 +16,8 @@
 #include "mtp_server.hpp"
 #include "nx/usbhdd.h"
 #include "ui/bottomHint.hpp"
+#include "ui/idle_backlight.hpp"
+
 
 #define COLOR(hex) pu::ui::Color::FromHex(hex)
 
@@ -24,6 +26,7 @@ namespace inst::ui {
     bool appletFinished = false;
     bool updateFinished = false;
     bool offlineDbUpdateCheckFinished = false;
+
     constexpr int kMainGridCols = 3;
     constexpr int kMainGridRows = 3;
     constexpr int kMainGridTileWidth = 360;
@@ -434,6 +437,8 @@ namespace inst::ui {
         this->awooImage->SetVisible(!inst::config::gayMode);
         this->updateMainGridSelection();
         this->AddThread(mainMenuThread);
+        IdleBacklight::ResetTimer();
+        this->AddThread(IdleBacklight::Update);
     }
 
     void MainPage::installMenuItem_Click() {
@@ -760,6 +765,7 @@ namespace inst::ui {
     }
 
     void MainPage::activateSelectedMainItem() {
+        IdleBacklight::Restore();
         switch (this->selectedMainIndex) {
             case 0:
                 this->shopInstallMenuItem_Click();
@@ -844,12 +850,16 @@ namespace inst::ui {
             return;
         }
 
+        if (Down || !Pos.IsEmpty())
+            IdleBacklight::ResetTimer();
+
         int bottomTapX = 0;
         if (DetectBottomHintTap(Pos, this->bottomHintTouch, 668, 52, bottomTapX)) {
             Down |= FindBottomHintButton(this->bottomHintSegments, bottomTapX);
         }
         inst::util::playNavigationClickIfNeeded(Down);
         if (((Down & HidNpadButton_Plus) || (Down & HidNpadButton_Minus) || (Down & HidNpadButton_B)) && mainApp->IsShown()) {
+            IdleBacklight::Restore();
             mainApp->FadeOut();
             mainApp->Close();
         }

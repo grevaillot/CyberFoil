@@ -5,6 +5,7 @@
 #include "util/config.hpp"
 #include "mtp_server.hpp"
 #include "ui/bottomHint.hpp"
+#include "ui/idle_backlight.hpp"
 #include <switch.h>
 
 #define COLOR(hex) pu::ui::Color::FromHex(hex)
@@ -118,6 +119,7 @@ namespace inst::ui {
         this->Add(this->awooImage);
         this->Add(this->installIconImage);
         if (inst::config::gayMode) this->awooImage->SetVisible(false);
+        this->AddThread(IdleBacklight::Update);
     }
 
     void instPage::setTopInstInfoText(std::string ourText){
@@ -209,6 +211,7 @@ namespace inst::ui {
     }
 
     void instPage::loadMainMenu(){
+        IdleBacklight::Restore();
         if (lastLayoutBeforeInstall != nullptr && lastLayoutBeforeInstall != mainApp->instpage)
             mainApp->LoadLayout(lastLayoutBeforeInstall);
         else
@@ -216,6 +219,7 @@ namespace inst::ui {
     }
 
     void instPage::loadInstallScreen(){
+        IdleBacklight::ResetTimer();
         auto currentLayout = mainApp->GetCurrentLayout();
         if (currentLayout != nullptr && currentLayout != mainApp->instpage)
             lastLayoutBeforeInstall = currentLayout;
@@ -233,6 +237,8 @@ namespace inst::ui {
     }
 
     void instPage::onInput(u64 Down, u64 Up, u64 Held, pu::ui::Touch Pos) {
+        if (Down || !Pos.IsEmpty())
+            IdleBacklight::ResetTimer();
         int bottomTapX = 0;
         if (DetectBottomHintTap(Pos, this->bottomHintTouch, 668, 52, bottomTapX)) {
             Down |= FindBottomHintButton(this->bottomHintSegments, bottomTapX);
@@ -243,6 +249,7 @@ namespace inst::ui {
                 inst::mtp::StopInstallServer();
             }
             if (this->hintText->IsVisible()) {
+                IdleBacklight::Restore();
                 loadMainMenu();
             }
         }
