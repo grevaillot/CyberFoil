@@ -381,13 +381,44 @@ namespace inst::util {
             playNavigationClick();
     }
     
-   std::vector<std::string> checkForAppUpdate () {
+    struct SemVer {
+        int major = 0, minor = 0, patch = 0;
+        std::string suffix;
+    };
+
+    static SemVer parseSemVer(const std::string& raw) {
+        SemVer v;
+        std::string s = raw;
+        if (!s.empty() && (s[0] == 'v' || s[0] == 'V'))
+            s = s.substr(1);
+        auto dash = s.find('-');
+        if (dash != std::string::npos) {
+            v.suffix = s.substr(dash + 1);
+            s = s.substr(0, dash);
+        }
+        std::sscanf(s.c_str(), "%d.%d.%d", &v.major, &v.minor, &v.patch);
+        return v;
+    }
+
+    // Returns true only if remote is strictly newer than local.
+    // A local suffix (e.g. "-mine") marks the build as prioritized:
+    // remote at the same base version will NOT trigger an update.
+    static bool isRemoteNewer(const SemVer& remote, const SemVer& local) {
+        if (remote.major != local.major) return remote.major > local.major;
+        if (remote.minor != local.minor) return remote.minor > local.minor;
+        if (remote.patch != local.patch) return remote.patch > local.patch;
+        // Same base: local suffix = prioritized, no update.
+        return false;
+    }
+
+    std::vector<std::string> checkForAppUpdate() {
         try {
             std::string jsonData = inst::curl::downloadToBuffer("https://api.github.com/repos/luketanti/CyberFoil/releases/latest", 0, 0, 1000L);
-            if (jsonData.size() == 0) return {};
+            if (jsonData.empty()) return {};
             nlohmann::json ourJson = nlohmann::json::parse(jsonData);
-            if (ourJson["tag_name"].get<std::string>() != inst::config::appVersion) {
-                std::vector<std::string> ourUpdateInfo = {ourJson["tag_name"].get<std::string>(), ourJson["assets"][0]["browser_download_url"].get<std::string>()};
+            std::string remoteTag = ourJson["tag_name"].get<std::string>();
+            if (isRemoteNewer(parseSemVer(remoteTag), parseSemVer(inst::config::appVersion))) {
+                std::vector<std::string> ourUpdateInfo = {remoteTag, ourJson["assets"][0]["browser_download_url"].get<std::string>()};
                 inst::config::updateInfo = ourUpdateInfo;
                 return ourUpdateInfo;
             }
