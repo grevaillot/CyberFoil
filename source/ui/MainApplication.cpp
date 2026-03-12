@@ -11,6 +11,7 @@
 #include "mtp_install.hpp"
 #include "mtp_server.hpp"
 #include "switch.h"
+#include "ui/idle_backlight.hpp"
 
 #define COLOR(hex) pu::ui::Color::FromHex(hex)
 
@@ -116,9 +117,14 @@ namespace inst::ui {
             last_check_tick = now;
 
             AppletFocusState focus = appletGetFocusState();
-            if (focus != last_focus && focus == AppletFocusState_InFocus) {
-                padConfigureInput(1, HidNpadStyleSet_NpadStandard);
-                padInitializeDefault(&this->input_pad);
+            if (focus != last_focus) {
+                if (focus == AppletFocusState_InFocus) {
+                    padConfigureInput(1, HidNpadStyleSet_NpadStandard);
+                    padInitializeDefault(&this->input_pad);
+                    IdleBacklight::ResetTimer();
+                } else {
+                    IdleBacklight::Restore();
+                }
             }
             last_focus = focus;
 
